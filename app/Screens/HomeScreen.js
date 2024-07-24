@@ -1,11 +1,13 @@
-// App.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { TextInput, Button, Card, Checkbox, Text, IconButton, FAB } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import dayjs from 'dayjs';
 
 const HomeScreen = () => {
-  const [task, setTask] = useState('');
   const [tasks, setTasks] = useState([]);
+  const [taskText, setTaskText] = useState('');
+  const [editIndex, setEditIndex] = useState(null);
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -14,60 +16,111 @@ const HomeScreen = () => {
         if (storedTasks) {
           setTasks(JSON.parse(storedTasks));
         }
-      } catch (error) {
-        console.error('Failed to load tasks', error);
+      } catch (e) {
+        console.error('Failed to load tasks.', e);
       }
     };
 
     loadTasks();
   }, []);
 
-  const saveTasks = async (tasks) => {
-    try {
-      await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
-    } catch (error) {
-      console.error('Failed to save tasks', error);
-    }
-  };
+  useEffect(() => {
+    const saveTasks = async () => {
+      try {
+        await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
+      } catch (e) {
+        console.error('Failed to save tasks.', e);
+      }
+    };
 
-  const handleAddTask = () => {
-    if (task.trim()) {
-      const newTasks = [...tasks, { id: Date.now().toString(), text: task }];
+    saveTasks();
+  }, [tasks]);
+
+  const addTask = () => {
+    if (taskText.trim()) {
+      const newTasks = [...tasks, { text: taskText, completed: false, dueDate: dayjs().add(1, 'day').toString() }];
       setTasks(newTasks);
-      setTask('');
-      saveTasks(newTasks);
-    } else {
-      Alert.alert('Error', 'Task cannot be empty');
+      setTaskText('');
     }
   };
 
-  const handleRemoveTask = (id) => {
-    const newTasks = tasks.filter(task => task.id !== id);
-    setTasks(newTasks);
-    saveTasks(newTasks);
+  const editTask = index => {
+    setTaskText(tasks[index].text);
+    setEditIndex(index);
   };
+
+  const saveEdit = () => {
+    if (editIndex !== null && taskText.trim()) {
+      const newTasks = tasks.map((task, index) => index === editIndex ? { ...task, text: taskText } : task);
+      setTasks(newTasks);
+      setTaskText('');
+      setEditIndex(null);
+    }
+  };
+
+  const deleteTask = index => {
+    const newTasks = tasks.filter((_, i) => i !== index);
+    setTasks(newTasks);
+  };
+
+  const toggleComplete = index => {
+    const newTasks = tasks.map((task, i) => i === index ? { ...task, completed: !task.completed } : task);
+    setTasks(newTasks);
+  };
+
+  const renderTask = ({ item, index }) => (
+    <Card style={styles.taskCard}>
+      <Card.Content style={styles.taskContent}>
+        <View style={styles.taskText}>
+          <Checkbox
+            status={item.completed ? 'checked' : 'unchecked'}
+            onPress={() => toggleComplete(index)}
+          />
+          <Text style={{ textDecorationLine: item.completed ? 'line-through' : 'none', flex: 1 }}>
+            {item.text}
+          </Text>
+        </View>
+        <Text>{`Due: ${dayjs(item.dueDate).format('YYYY-MM-DD')}`}</Text>
+        <View style={styles.taskActions}>
+          <IconButton
+            icon="pencil"
+            onPress={() => editTask(index)}
+          />
+          <IconButton
+            icon="delete"
+            onPress={() => deleteTask(index)}
+          />
+        </View>
+      </Card.Content>
+    </Card>
+  );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>To-Do List</Text>
       <TextInput
         style={styles.input}
-        placeholder="Enter task"
-        value={task}
-        onChangeText={setTask}
+        mode="outlined"
+        label="Add a new task"
+        value={taskText}
+        onChangeText={setTaskText}
       />
-      <Button title="Add Task" onPress={handleAddTask} />
+      <Button
+        mode="contained"
+        onPress={editIndex !== null ? saveEdit : addTask}
+        style={styles.button}
+      >
+        {editIndex !== null ? "Save Edit" : "Add Task"}
+      </Button>
       <FlatList
         data={tasks}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.taskItem}>
-            <Text style={styles.taskText}>{item.text}</Text>
-            <TouchableOpacity onPress={() => handleRemoveTask(item.id)}>
-              <Text style={styles.removeButton}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        renderItem={renderTask}
+        keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={styles.taskList}
+      />
+      <FAB
+        style={styles.fab}
+        icon="plus"
+        onPress={() => setEditIndex(null)}
       />
     </View>
   );
@@ -76,34 +129,38 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    marginBottom: 8,
-    borderRadius: 4,
+    marginBottom: 10,
   },
-  taskItem: {
+  button: {
+    marginBottom: 20,
+  },
+  taskList: {
+    paddingBottom: 80,
+  },
+  taskCard: {
+    marginBottom: 10,
+  },
+  taskContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    justifyContent: 'space-between',
   },
   taskText: {
-    fontSize: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  removeButton: {
-    color: 'red',
+  taskActions: {
+    flexDirection: 'row',
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
   },
 });
 
