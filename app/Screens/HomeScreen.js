@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
-import { TextInput, Button, Card, Checkbox, Text, IconButton, FAB } from 'react-native-paper';
+import { TextInput, Button, Card, Checkbox, Text, IconButton, FAB, SegmentedButtons } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import dayjs from 'dayjs';
 
@@ -8,6 +8,7 @@ const HomeScreen = () => {
   const [tasks, setTasks] = useState([]);
   const [taskText, setTaskText] = useState('');
   const [editIndex, setEditIndex] = useState(null);
+  const [filter, setFilter] = useState('all'); 
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -68,6 +69,12 @@ const HomeScreen = () => {
     setTasks(newTasks);
   };
 
+  const filteredTasks = tasks.filter(task => {
+    if (filter === 'completed') return task.completed;
+    if (filter === 'pending') return !task.completed;
+    return true;
+  });
+
   const renderTask = ({ item, index }) => (
     <Card style={styles.taskCard}>
       <Card.Content style={styles.taskContent}>
@@ -111,8 +118,18 @@ const HomeScreen = () => {
       >
         {editIndex !== null ? "Save Edit" : "Add Task"}
       </Button>
+      <SegmentedButtons
+        value={filter}
+        onValueChange={setFilter}
+        buttons={[
+          { value: 'all', label: 'All' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'pending', label: 'Pending' }
+        ]}
+        style={styles.segmentedButtons}
+      />
       <FlatList
-        data={tasks}
+        data={filteredTasks}
         renderItem={renderTask}
         keyExtractor={(item, index) => index.toString()}
         contentContainerStyle={styles.taskList}
@@ -136,6 +153,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   button: {
+    marginBottom: 20,
+  },
+  segmentedButtons: {
     marginBottom: 20,
   },
   taskList: {
