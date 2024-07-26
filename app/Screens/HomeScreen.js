@@ -66,7 +66,7 @@ const HomeScreen = () => {
 
   const toggleComplete = index => {
     const newTasks = tasks.map((task, i) => i === index ? { ...task, completed: !task.completed } : task);
-    setTasks(newTasks);
+    setTasks(newTasks); 
   };
 
   const filteredTasks = tasks.filter(task => {
