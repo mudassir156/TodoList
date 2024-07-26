@@ -1,5 +1,9 @@
 **TodoList App**
+<<<<<<< HEAD
 <h1>on main branch<h2>
+=======
+this is feature branch
+>>>>>>> feature1
 **Description**<br>
 A simple task management app built with React Native and Expo. Users can add, edit, delete, and mark tasks as complete. Features include local storage, task filtering, due dates, and push notifications.
 
